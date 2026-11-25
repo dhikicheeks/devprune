@@ -49,6 +49,9 @@ pipx install git+https://github.com/dhikicheeks/devprune.git
 
 To update later, run the same command with `--force`.
 
+> **Name:** DevPrune is not related to the [`dev-prune`](https://pypi.org/project/dev-prune/) package on PyPI, a separate
+> project with a similar name.
+
 Or install from source:
 
 ```sh
