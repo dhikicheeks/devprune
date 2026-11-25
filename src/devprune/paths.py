@@ -10,3 +10,8 @@ def cache_file():
 
 def config_file():
     return HOME / ".config" / "devprune" / "config.json"
+
+
+def trash_root():
+    """Staging area for items moved aside by a clean; only the `trash` module writes here."""
+    return HOME / ".cache" / "devprune" / "trash"

@@ -22,6 +22,10 @@ from devprune import measure, safety, scan
     (".gnupg", False),
     ("Library/Keychains", False),
     ("Library/Application Support/x", False),
+    (".cache/devprune/trash", False),            # the DevPrune staging area and anything inside it
+    (".cache/devprune/trash/20260101-000000-abcd/001/node_modules", False),
+    (".cache/devprune", False),                  # a folder that contains the staging area
+    (".cache/devprune/last.json", True),         # a sibling of the staging area is unaffected
 ])
 def test_is_safe_inside_home(home, rel, expected):
     assert safety.is_safe(home / rel) is expected

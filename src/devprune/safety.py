@@ -34,6 +34,9 @@ def is_safe(p):
         return False
     if is_excluded(rp):
         return False
+    troot = paths.trash_root().resolve()          # the staging area is never a target, nor is anything holding it
+    if rp == troot or rp.is_relative_to(troot) or troot.is_relative_to(rp):
+        return False
     return True
 
 
