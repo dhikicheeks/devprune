@@ -47,3 +47,29 @@ test showing that the unsafe case is refused. Tests run against a fake `$HOME` a
 ## Pull requests
 
 Run `pytest` and `ruff check .` first. Describe what you changed and how you tested it.
+
+## Releasing (maintainer)
+
+Releases go to PyPI with [Trusted Publishing](https://docs.pypi.org/trusted-publishers/): GitHub proves to PyPI who it
+is, so there is no API token to store or leak. Nothing is published automatically. `.github/workflows/publish.yml`
+only runs when the owner starts it by hand, and the `pypi` environment also needs the owner's approval and a `v*` tag.
+
+**One-time setup** (on both <https://test.pypi.org> and <https://pypi.org>, with 2FA on): *Account settings → Publishing →
+Add a pending publisher*, with
+
+| Field | TestPyPI | PyPI |
+|---|---|---|
+| PyPI project name | `devprune` | `devprune` |
+| Owner | `dhikicheeks` | `dhikicheeks` |
+| Repository name | `devprune` | `devprune` |
+| Workflow name | `publish.yml` | `publish.yml` |
+| Environment name | `testpypi` | `pypi` |
+
+**Each release**
+
+1. Bump `version` in `pyproject.toml` and `__version__` in `src/devprune/__init__.py`, date the `CHANGELOG.md` entry,
+   and merge once CI is green. A version number can never be reused on PyPI.
+2. Tag it (`git tag -a v0.1.1 -m "DevPrune 0.1.1"`, then `git push origin v0.1.1`) and create the GitHub Release.
+3. *Actions → Publish to PyPI → Run workflow*: first with target `testpypi`, check
+   <https://test.pypi.org/project/devprune/>, then run it again from the tag with target `pypi` and approve it.
+4. Check that `pipx install devprune` works in a clean environment.
