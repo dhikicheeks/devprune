@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 - 2026-11-25
 
 - Local web dashboard (`devprune` / `dp`) grouped by framework, then project, then item, with sizes and checkboxes.
 - Rules as data: Laravel, Flutter, Next.js, Node.js project rules and global caches (pnpm, npm, Composer, Dart, Xcode, Gradle, Homebrew, ...).

@@ -1,4 +1,4 @@
-<h1><img src="src/devprune/web/logo-mark.svg" alt="" width="40" height="40" align="top"> DevPrune</h1>
+<h1><img src="https://raw.githubusercontent.com/dhikicheeks/devprune/main/src/devprune/web/logo-mark.svg" alt="" width="40" height="40" align="top"> DevPrune</h1>
 
 A local dashboard that finds and removes the caches and build artifacts developers accumulate:
 `node_modules`, `.next`, `vendor`, Flutter `build/`, Xcode DerivedData, the pnpm store, Gradle caches and more.
@@ -12,8 +12,8 @@ Run one command, your browser opens, and you see every project grouped by framew
 > and note next to each item. This is alpha software. Use it at your own risk.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="DevPrune dashboard: space per framework, projects with sizes and risk labels, and the list of selected items" src="docs/screenshot-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dhikicheeks/devprune/main/docs/screenshot-dark.png">
+  <img alt="DevPrune dashboard: space per framework, projects with sizes and risk labels, and the list of selected items" src="https://raw.githubusercontent.com/dhikicheeks/devprune/main/docs/screenshot-light.png">
 </picture>
 
 ## Features
@@ -81,7 +81,7 @@ By default it scans these folders in your home directory if they exist: `Project
 ```
 
 Excluded folders are never scanned or deleted. Rules from this file cannot run commands.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the rule format.
+See [CONTRIBUTING.md](https://github.com/dhikicheeks/devprune/blob/main/CONTRIBUTING.md) for the rule format.
 
 ## Safety
 
@@ -93,7 +93,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the rule format.
   headers and sets a strict Content-Security-Policy.
 - Gradle caches are not removed while a Gradle daemon is running.
 
-Found a safety problem? See [SECURITY.md](SECURITY.md).
+Found a safety problem? See [SECURITY.md](https://github.com/dhikicheeks/devprune/blob/main/SECURITY.md).
 
 ## Limitations
 
