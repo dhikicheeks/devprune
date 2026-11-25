@@ -39,7 +39,17 @@ Run one command, your browser opens, and you see every project grouped by framew
 
 ## Install
 
-Requires macOS and Python 3.9 or newer. Not on PyPI yet, so install from source:
+Requires macOS and Python 3.9 or newer. Not on PyPI yet.
+
+The easiest way is [pipx](https://pipx.pypa.io/), which installs command-line tools in their own environment:
+
+```sh
+pipx install git+https://github.com/dhikicheeks/devprune.git
+```
+
+To update later, run the same command with `--force`.
+
+Or install from source:
 
 ```sh
 git clone https://github.com/dhikicheeks/devprune.git
