@@ -171,6 +171,13 @@ def test_http_static_whitelist(srv):
     assert r.status == 200 and r.getheader("Content-Type") == "image/png"
     assert data.startswith(b"\x89PNG")
     assert r.getheader("X-Content-Type-Options") == "nosniff"
+    c = http.client.HTTPConnection("127.0.0.1", srv, timeout=10)
+    c.request("GET", "/static/logo-mark.svg")
+    r = c.getresponse()
+    data = r.read()
+    assert r.status == 200 and r.getheader("Content-Type") == "image/svg+xml"
+    assert data.startswith(b"<svg") and b"<script" not in data and b"href=" not in data   # a plain, inert image
+    assert "default-src 'none'" in r.getheader("Content-Security-Policy")
     for bad in ("/static/index.html", "/static/../cleaner.py", "/static/%2e%2e/server.py", "/static/"):
         assert raw(srv, "GET", bad)[0] == 404
 

@@ -10,7 +10,8 @@ from . import clean, config, launcher, scan, state, trash
 
 TOKEN = secrets.token_urlsafe(24)
 WEB = Path(__file__).parent / "web"
-STATIC = {"app.js": "text/javascript", "style.css": "text/css", "logo-mark.png": "image/png"}
+STATIC = {"app.js": "text/javascript", "style.css": "text/css", "logo-mark.png": "image/png",
+          "logo-mark.svg": "image/svg+xml"}
 MAX_BODY = 1_000_000
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "

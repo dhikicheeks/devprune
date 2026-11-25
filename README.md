@@ -1,4 +1,4 @@
-<h1><img src="src/devprune/web/logo-mark.png" alt="" width="40" height="40" align="top"> DevPrune</h1>
+<h1><img src="src/devprune/web/logo-mark.svg" alt="" width="40" height="40" align="top"> DevPrune</h1>
 
 A local dashboard that finds and removes the caches and build artifacts developers accumulate:
 `node_modules`, `.next`, `vendor`, Flutter `build/`, Xcode DerivedData, the pnpm store, Gradle caches and more.
