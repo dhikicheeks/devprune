@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DevPrune</title>
+<link rel="icon" type="image/png" href="/static/logo-mark.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-token="__TOKEN__" data-roots="__ROOTS__">
+<div class="wrap">
+<div class="layout">
+<main class="main">
+  <header class="top">
+    <h1><img src="/static/logo-mark.png" alt="" width="28" height="28">DevPrune</h1>
+    <div id="banner"></div>
+    <div class="actions">
+      <button id="scan">Scan</button>
+      <button class="sec" id="full" title="Re-measure every folder, including the slow ones">Full scan</button>
+      <button class="sec icon" id="gear" title="Settings" aria-label="Settings" aria-expanded="false">⚙</button>
+    </div>
+  </header>
+  <section class="card" id="settings" hidden>
+    <label for="roots">Project folders <span class="hint">one per line</span></label>
+    <textarea id="roots" rows="3"></textarea>
+    <div class="sep"></div>
+    <label for="cmdname">Terminal command <span class="hint">your own short name to open this dashboard, e.g. <code>bersih</code></span></label>
+    <div class="inline">
+      <input id="cmdname" type="text" maxlength="32" placeholder="e.g. bersih" autocomplete="off" spellcheck="false">
+      <button id="cmdset">Create</button>
+    </div>
+    <div id="cmdmsg"></div>
+    <div id="cmdlist"></div>
+  </section>
+  <section class="card" id="overview" hidden aria-label="Space by framework">
+    <div class="ovbar" id="ovbar"></div>
+    <div class="ovleg" id="ovleg"><span class="ovnote" id="ovnote">solid = selected</span></div>
+  </section>
+  <div class="tools" id="tools" hidden>
+    <input id="q" type="search" placeholder="Filter by project or item…" autocomplete="off" spellcheck="false" aria-label="Filter items">
+    <button class="sec" id="collapse">Collapse all</button>
+    <button class="sec" id="expand">Expand all</button>
+  </div>
+  <div id="out"><div id="msg">Starting scan…</div></div>
+</main>
+<aside class="side">
+  <div class="tot" id="tot">0 B selected</div>
+  <div id="selrisk"></div>
+  <div class="sellist" id="sellist"></div>
+  <label class="chk"><input type="checkbox" id="dry" checked> Dry run (simulate, deletes nothing)</label>
+  <button class="danger" id="clean" disabled>Simulate</button>
+  <div class="two">
+    <button class="sec" id="all">Select safe</button>
+    <button class="sec" id="none">Clear</button>
+  </div>
+</aside>
+</div>
+</div>
+<dialog id="dlg" aria-label="DevPrune"></dialog>
+<div id="toasts" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

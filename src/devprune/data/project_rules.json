@@ -1,0 +1,48 @@
+[
+  {
+    "framework": "Laravel",
+    "detect": {"files_all": ["artisan", "composer.json"]},
+    "prune_dirs": ["storage", "bootstrap", "public"],
+    "targets": [
+      {"path": "vendor", "label": "vendor/", "risk": "medium", "note": "Run `composer install` again."},
+      {"path": "storage/logs", "label": "storage/logs (*.log)", "mode": "contents", "risk": "safe", "note": "Log contents are removed; the folder is kept."},
+      {"path": "storage/framework/cache/data", "label": "storage/framework/cache", "mode": "contents", "risk": "safe", "note": "Laravel file cache."},
+      {"path": "storage/framework/views", "label": "storage/framework/views", "mode": "contents", "risk": "safe", "note": "Compiled Blade views."},
+      {"path": "storage/framework/sessions", "label": "storage/framework/sessions", "mode": "contents", "risk": "medium", "note": "File sessions; users logged in locally will be signed out."},
+      {"path": "bootstrap/cache", "label": "bootstrap/cache", "mode": "contents", "risk": "safe", "note": "Config/route cache. Run `php artisan optimize` if needed."}
+    ]
+  },
+  {
+    "framework": "Flutter",
+    "detect": {"files_all": ["pubspec.yaml"]},
+    "prune_dirs": ["ios", "android", "macos", "linux", "windows"],
+    "targets": [
+      {"path": "build", "label": "build/", "risk": "safe", "note": "Build output, recreated on the next build."},
+      {"path": ".dart_tool", "label": ".dart_tool/", "risk": "safe", "note": "Tooling cache; `flutter pub get` recreates it."},
+      {"path": "ios/Pods", "label": "ios/Pods", "risk": "safe", "note": "Run `pod install` again."},
+      {"path": "ios/build", "label": "ios/build", "risk": "safe", "note": "iOS build output."},
+      {"path": "macos/Pods", "label": "macos/Pods", "risk": "safe", "note": "Run `pod install` again."},
+      {"path": "android/.gradle", "label": "android/.gradle", "risk": "safe", "note": "Project Gradle cache."},
+      {"path": "android/build", "label": "android/build", "risk": "safe", "note": "Android build output."},
+      {"path": "android/app/build", "label": "android/app/build", "risk": "safe", "note": "Android build output."}
+    ]
+  },
+  {
+    "framework": "Next.js",
+    "detect": {
+      "files_all": ["package.json"],
+      "any_of": [{"file_prefix": "next.config."}, {"package_json_contains": "\"next\""}]
+    },
+    "targets": [
+      {"path": ".next", "label": ".next/", "risk": "safe", "note": "Next.js build output and cache."}
+    ]
+  },
+  {
+    "framework": "Node.js",
+    "detect": {"files_all": ["package.json"]},
+    "targets": [
+      {"path": "node_modules", "label": "node_modules/", "risk": "medium", "note": "Run `pnpm install` again."},
+      {"path": ".turbo", "label": ".turbo/", "risk": "safe", "note": "Turborepo cache."}
+    ]
+  }
+]
