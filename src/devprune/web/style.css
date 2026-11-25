@@ -82,15 +82,15 @@ input[type=checkbox]{margin:0;width:15px;height:15px;accent-color:var(--acc);fle
 .item{display:grid;grid-template-columns:15px minmax(0,1fr) auto;gap:10px;align-items:center;padding:5px 10px 5px 52px;border-top:1px solid var(--bd)}
 .item:hover{background:var(--hover)}
 .item.gone{opacity:.5}
-.line{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
-.t{font-weight:500;flex:none}
+.line{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap}
+.t{font-weight:500;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .n{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .res{font-size:12px;margin-top:1px}
 .tag{flex:none;font-size:10.5px;line-height:16px;padding:0 7px;border-radius:99px;background:var(--ok-bg);color:var(--ok)}
 .tag.medium{background:var(--warn-bg);color:var(--warn)}
 .tag.careful{background:var(--bad-bg);color:var(--bad)}
 .tag.none{background:var(--hover);color:var(--mut)}
-.size{display:flex;align-items:center;gap:8px;justify-content:flex-end;font-weight:700;white-space:nowrap}
+.size{flex:none;display:flex;align-items:center;gap:8px;justify-content:flex-end;font-weight:700;white-space:nowrap}
 .size .v{min-width:62px;text-align:right}
 .meter{width:70px;height:5px;border-radius:99px;background:var(--hover);overflow:hidden;flex:none}
 .meter i{display:block;height:100%;background:var(--bar)}
@@ -131,9 +131,15 @@ input[type=checkbox]{margin:0;width:15px;height:15px;accent-color:var(--acc);fle
 }
 @media (max-width:640px){
   .n{display:none}
-  .meter{width:40px}
+  .meter{display:none}
+  .gh .cnt{white-space:nowrap}
+  .fwh .sz,.gh .sz{white-space:nowrap}
   .grp{margin-left:14px}
   .item{padding-left:36px}
+  .top{row-gap:6px}
+  #banner{order:3;flex:1 0 100%}
+  .tools{flex-wrap:wrap}
+  .tools input{flex:1 1 100%}
 }
 
 /* dialogs */
@@ -165,6 +171,7 @@ dialog[open]{animation:pop .16s ease-out}
 .plist.live .prow,.plist.bad .prow{grid-template-columns:22px minmax(0,1fr) auto}
 .plist.bad .prow{grid-template-columns:22px minmax(0,1fr)}
 .pn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){.pn{white-space:normal;overflow-wrap:anywhere}}
 .pg{color:var(--mut);font-weight:400}
 .pv{font-weight:700;white-space:nowrap}
 .pm{color:var(--bad);font-size:12px;overflow-wrap:anywhere}
