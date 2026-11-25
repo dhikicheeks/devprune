@@ -10,6 +10,8 @@
 - Confirmation dialog before deleting, live per-item progress, and a result summary (cleaned, failed with reasons, not processed) instead of browser alerts; error toasts.
 - Cancelable scan, cached results for instant start, quick vs. full scan.
 - Cleaning with progress, stop button, dry run and official tool commands where available.
+- Ctrl+C during a cleanup warns first (a second press stops after the current item, a third quits at once); SIGTERM/SIGHUP
+  stop after the current item. On exit DevPrune reminds you of items it is still holding.
 - Undo: cleaned folders are moved into a DevPrune holding area (`~/.cache/devprune/trash`) instead of being deleted;
   a bar shows what is held, with Review, Restore all and Empty. Tool-command items and the macOS Trash are still deleted
   for real, and "Delete permanently" skips the holding area.

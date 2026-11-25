@@ -30,6 +30,8 @@ Run one command, your browser opens, and you see every project grouped by framew
 - Pick items, review them in a side panel (with a warning if any are medium or careful risk), then confirm.
 - Live progress while cleaning: per-item status, a stop button, and a summary of what was cleaned, what failed and why.
   Reloading the page reconnects to a running scan or cleaning. Simulate mode changes nothing.
+- Safe to interrupt: pressing Ctrl+C while a cleanup runs asks first (press it twice to stop after the current item);
+  closing the terminal or `kill` stops after the current item. Moved items are journaled, so nothing is left half-done.
 - Undo: cleaned folders are moved aside, not deleted. A bar at the top shows what DevPrune is holding, with
   **Review**, **Restore all** and **Empty**; restoring over something that was created again asks first.
 - Choose your own terminal command name from the dashboard.

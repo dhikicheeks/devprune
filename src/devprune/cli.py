@@ -3,7 +3,19 @@ import argparse
 import threading
 import webbrowser
 
-from . import __version__, cache, config, server, trash
+from . import __version__, cache, config, lifecycle, server, trash
+
+
+def _holding_note():
+    """On the way out: remind the user that DevPrune still holds items they can restore or empty."""
+    try:
+        t = trash.summary()
+        if t["count"]:
+            size = f" ({t['kb'] / 1024:.1f} MB)" if t["kb"] >= 1024 else (f" ({t['kb']} KB)" if t["kb"] else "")
+            print(f"DevPrune is holding {t['count']} item{'s' if t['count'] != 1 else ''}{size}. "
+                  "Run devprune again to restore or empty them.", flush=True)
+    except Exception:  # noqa: BLE001 - never fail on the way out
+        pass
 
 
 def main(argv=None):
@@ -31,8 +43,13 @@ def main(argv=None):
     print(f"DevPrune is running at {url}  (Ctrl+C to stop)", flush=True)
     if not a.no_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    guard = lifecycle.Guard(srv)
+    guard.install()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
-    return 0
+    finally:
+        guard.restore()
+    _holding_note()
+    return guard.exit_code
