@@ -42,7 +42,7 @@ Run one command, your browser opens, and you see every project grouped by framew
 Requires macOS and Python 3.9 or newer. Not on PyPI yet, so install from source:
 
 ```sh
-git clone <repository-url> devprune
+git clone https://github.com/dhikicheeks/devprune.git
 cd devprune
 python3 -m pip install -e .
 ```
