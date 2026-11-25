@@ -5,8 +5,11 @@ A local dashboard that finds and removes the caches and build artifacts develope
 
 Run one command, your browser opens, and you see every project grouped by framework with sizes and checkboxes.
 
-> **Warning: deletion is permanent.** Items do not go to the Trash. Use **Simulate** first, and read the risk
-> label and note next to each item. This is alpha software. Use it at your own risk.
+> **Warning: cleaning removes files.** By default DevPrune moves items into its own holding area (not the macOS
+> Trash), where you can restore them until you empty it; disk space is only freed when it is emptied. Items that are
+> cleaned by a tool command (`pnpm store prune`, `brew cleanup`, ...) and the macOS Trash itself are deleted for real,
+> and you can tick **Delete permanently** to skip the holding area. Use **Simulate** first, and read the risk label
+> and note next to each item. This is alpha software. Use it at your own risk.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
@@ -27,6 +30,8 @@ Run one command, your browser opens, and you see every project grouped by framew
 - Pick items, review them in a side panel (with a warning if any are medium or careful risk), then confirm.
 - Live progress while cleaning: per-item status, a stop button, and a summary of what was cleaned, what failed and why.
   Reloading the page reconnects to a running scan or cleaning. Simulate mode changes nothing.
+- Undo: cleaned folders are moved aside, not deleted. A bar at the top shows what DevPrune is holding, with
+  **Review**, **Restore all** and **Empty**; restoring over something that was created again asks first.
 - Choose your own terminal command name from the dashboard.
 - No dependencies. Python standard library only.
 

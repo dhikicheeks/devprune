@@ -20,6 +20,7 @@
       <button class="sec icon" id="gear" title="Settings" aria-label="Settings" aria-expanded="false">⚙</button>
     </div>
   </header>
+  <section class="card holdbar" id="hold" hidden aria-live="polite"></section>
   <section class="card" id="settings" hidden>
     <label for="roots">Project folders <span class="hint">one per line</span></label>
     <textarea id="roots" rows="3"></textarea>
@@ -48,6 +49,7 @@
   <div id="selrisk"></div>
   <div class="sellist" id="sellist"></div>
   <label class="chk"><input type="checkbox" id="dry" checked> Dry run (simulate, deletes nothing)</label>
+  <label class="chk"><input type="checkbox" id="perm"> Delete permanently (skip DevPrune, no undo)</label>
   <button class="danger" id="clean" disabled>Simulate</button>
   <div class="two">
     <button class="sec" id="all">Select safe</button>

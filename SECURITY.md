@@ -1,6 +1,7 @@
 # Security policy
 
-DevPrune **deletes files permanently** and runs a local web server, so safety bugs matter.
+DevPrune **removes files** (by default it moves them to a holding area first; some items are deleted for real) and
+runs a local web server, so safety bugs matter.
 
 ## Reporting a vulnerability
 

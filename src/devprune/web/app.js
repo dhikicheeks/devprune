@@ -16,6 +16,7 @@ let cachedTs = null;
 let scanPoll = null;
 let cleanPoll = null;
 let wantFull = false;
+let holdInfo = null;   // last /api/trash answer: what DevPrune is holding
 
 const fmt = kb => {
   let b = kb * 1024, i = 0;
@@ -169,9 +170,11 @@ function updateTotals() {
 
 function updateCleanButton() {
   const dry = $('#dry').checked;
+  const perm = $('#perm').checked;
   const chosen = items.filter(i => sel.has(i.id));
-  $('#clean').textContent = dry ? 'Simulate' : (chosen.length ? 'Delete ' + fmt(sum(chosen)) : 'Delete');
-  $('#clean').className = dry ? '' : 'danger';
+  const amount = chosen.length ? ' ' + fmt(sum(chosen)) : '';
+  $('#clean').textContent = dry ? 'Simulate' : perm ? 'Delete' + amount + ' permanently' : 'Clean' + amount;
+  $('#clean').className = !dry && perm ? 'danger' : '';
 }
 
 const collapsed = new Set();
@@ -264,6 +267,11 @@ function render(results) {
             line.append(t);
             if (i.risk !== 'safe') line.append(el('span', 'tag ' + i.risk, i.risk));
             if (i.exists === false) line.append(el('span', 'tag none', 'not found'));
+            if (!canStage(i)) {
+              const nu = el('span', 'tag none', 'no undo');
+              nu.title = 'Cleaned by a tool command or emptied for real, so it cannot be restored';
+              line.append(nu);
+            }
             line.append(el('span', 'n', i.note));
             main.append(line);
             const res = results && results.find(x => x.id === i.id);
@@ -411,15 +419,43 @@ function itemList(list, max) {
   return box;
 }
 
-function confirmDelete(chosen) {
+// A confirmation dialog whose body `build` fills in. Resolves true on confirm and false on Cancel/Esc.
+// The dialog is replaced in place by whatever comes next, never closed and reopened (D-17).
+function askConfirm(build, okText, danger) {
   return new Promise(resolve => {
     let settled = false;
     const settle = v => { if (!settled) { settled = true; resolve(v); } };
     // a 'close' that arrives while a dialog is open belongs to an earlier dialog, so ignore it
     dlg.addEventListener('close', () => { if (!dlg.open) settle(false); }, {once: true});
     const box = el('div', 'dbox');
-    box.append(dlgHead('warn', 'Delete ' + plural(chosen.length, 'item') + '?',
-      fmt(sum(chosen)) + ' will be removed permanently. This cannot be undone and nothing goes to the Trash.'));
+    build(box);
+    const cancel = button('Cancel', 'sec', () => { settle(false); closeDialog(); });
+    box.append(dlgButtons(cancel, button(okText, danger ? 'danger' : '', () => settle(true))));
+    openDialog('confirm', box);
+    cancel.focus();
+  });
+}
+
+// Tool-command items and the macOS Trash are always deleted for real; everything else can be moved aside.
+const canStage = i => !i.has_cmd && i.can_stage !== false;
+
+function confirmClean(chosen, perm) {
+  const moved = perm ? [] : chosen.filter(canStage);
+  const gone = chosen.filter(i => perm || !canStage(i));
+  const allGone = gone.length > 0 && !moved.length;
+  let badge, sub;
+  if (!gone.length) {
+    badge = 'info';
+    sub = fmt(sum(moved)) + ' will be moved aside by DevPrune. You can restore it until you empty it; disk space is only freed when it is emptied.';
+  } else if (allGone) {
+    badge = 'warn';
+    sub = fmt(sum(gone)) + ' will be removed permanently. This cannot be undone.';
+  } else {
+    badge = 'warn';
+    sub = fmt(sum(moved)) + ' will be moved aside (undo possible). ' + fmt(sum(gone)) + ' will be deleted permanently (no undo).';
+  }
+  return askConfirm(box => {
+    box.append(dlgHead(badge, (allGone ? 'Delete ' : 'Clean ') + plural(chosen.length, 'item') + '?', sub));
     const careful = chosen.filter(i => i.risk === 'careful').length;
     const medium = chosen.filter(i => i.risk === 'medium').length;
     if (careful || medium) {
@@ -428,17 +464,25 @@ function confirmDelete(chosen) {
       if (medium) parts.push(plural(medium, 'medium-risk item'));
       box.append(el('div', 'riskbox ' + (careful ? 'careful' : 'medium'), 'Includes ' + parts.join(' and ') + '. Check the notes first.'));
     }
-    box.append(itemList(chosen, 6));
-    const cancel = button('Cancel', 'sec', () => { settle(false); closeDialog(); });
-    box.append(dlgButtons(cancel, button('Delete ' + fmt(sum(chosen)), 'danger', () => settle(true))));
-    openDialog('confirm', box);
-    cancel.focus();
-  });
+    if (moved.length && gone.length) {
+      box.append(el('div', 'dsec', 'Moved aside, can be restored'), itemList(moved, 5),
+        el('div', 'dsec', 'Deleted permanently'), itemList(gone, 5));
+    } else {
+      box.append(itemList(chosen, 6));
+      if (!perm && gone.length) box.append(el('p', 'dnote', 'Items cleaned by a tool command (pnpm, npm, brew…) or the macOS Trash cannot be undone.'));
+    }
+  }, (allGone ? 'Delete ' : 'Clean ') + fmt(sum(chosen)), gone.length > 0);
 }
 
-function showProgress(dry, chosen, resumed) {
+const PROGRESS_TITLE = {
+  clean: (dry, perm) => dry ? 'Simulating…' : perm ? 'Deleting…' : 'Cleaning…',
+  empty: () => 'Emptying…',
+  restore: () => 'Restoring…',
+};
+
+function showProgress(kind, dry, chosen, resumed, perm) {
   const box = el('div', 'dbox');
-  const head = dlgHead('run', dry ? 'Simulating…' : 'Deleting…', 'Starting…');
+  const head = dlgHead('run', PROGRESS_TITLE[kind](dry, perm), 'Starting…');
   const sub = head.querySelector('.dsub');
   const bar = el('div', 'pbar');
   const fill = el('i', 'pfill');
@@ -464,7 +508,7 @@ function showProgress(dry, chosen, resumed) {
     try { await api('/api/clean_stop'); } catch (e) { /* the poll will report the real state */ }
   });
   box.append(head, bar, stats);
-  if (resumed) box.append(el('p', 'dnote', 'Reconnected: this cleaning was already running before the page was reloaded.'));
+  if (resumed) box.append(el('p', 'dnote', 'Reconnected: this was already running before the page was reloaded.'));
   box.append(list, dlgButtons(stop));
   openDialog('progress', box);
 
@@ -477,7 +521,14 @@ function showProgress(dry, chosen, resumed) {
       pulse.style.left = (total ? res.length / total * 100 : 0) + '%';
       pulse.style.width = (running && total ? 100 / total : 0) + '%';
       sub.textContent = running && d.current ? 'Working on ' + d.current : 'Finishing…';
-      stats.textContent = res.length + ' of ' + total + ' · ' + (dry ? 'would free ' : 'freed ') + fmt(d.freed_kb || 0) + ' · ' + secs + ' s';
+      const parts = [res.length + ' of ' + total];
+      if (kind === 'empty') parts.push('freed ' + fmt(d.freed_kb || 0));
+      if (kind === 'clean') {
+        if (d.freed_kb || !d.held_kb) parts.push((dry ? 'would free ' : 'freed ') + fmt(d.freed_kb || 0));
+        if (d.held_kb) parts.push((dry ? 'would move aside ' : 'moved aside ') + fmt(d.held_kb));
+      }
+      parts.push(secs + ' s');
+      stats.textContent = parts.join(' · ');
       rows.forEach((r, k) => {
         const x = res[k];
         const state = x ? (x.ok ? 'ok' : 'fail') : (running && k === res.length ? 'run' : 'queued');
@@ -492,7 +543,21 @@ function showProgress(dry, chosen, resumed) {
   };
 }
 
-function showResult(d, dry, chosen, secs, again) {
+function problemList(bad, byId) {
+  const problems = el('div', 'plist bad');
+  bad.forEach(r => {
+    const i = byId.get(r.id);
+    const row = el('div', 'prow');
+    const main = el('div', 'pmain');
+    main.append(el('div', 'pn', i ? i.label + ' · ' + i.group : r.id), el('div', 'pm', r.msg));
+    row.append(el('span', 'st fail', '✕'), main);
+    problems.append(row);
+  });
+  return problems;
+}
+
+function showResult(d, kind, dry, chosen, secs, again) {
+  if (kind !== 'clean') { showTrashResult(d, kind, chosen, secs); return; }
   const box = el('div', 'dbox');
   if (d.state === 'error') {
     box.append(dlgHead('err', 'Cleaning failed', d.error || 'Unknown error'), dlgButtons(button('Close', '', closeDialog)));
@@ -504,30 +569,34 @@ function showResult(d, dry, chosen, secs, again) {
   const good = res.filter(r => r.ok);
   const bad = res.filter(r => !r.ok);
   const notRun = chosen.length - res.length;
+  const held = d.held_kb || 0;
   const freed = fmt(d.freed_kb || 0);
-  let kind, title, sub;
+  // moved aside is not freed: say which is which
+  const outcome = !held ? 'Freed ' + freed : (d.freed_kb ? 'Moved aside ' + fmt(held) + ', freed ' + freed : 'Moved aside ' + fmt(held));
+  let badge, title, sub;
   if (dry) {
-    kind = 'info';
+    badge = 'info';
     title = 'Simulation finished';
-    sub = 'Would free ' + freed + ' from ' + plural(good.length, 'item') + '. Nothing was deleted.';
+    sub = (held ? 'Would move aside ' + fmt(held) + (d.freed_kb ? ' and free ' + freed : '') : 'Would free ' + freed) +
+      ' from ' + plural(good.length, 'item') + '. Nothing was changed.';
   } else if (d.state === 'stopped') {
-    kind = 'warn';
+    badge = 'warn';
     title = 'Stopped after ' + res.length + ' of ' + chosen.length;
-    sub = 'Freed ' + freed + ' before stopping.';
+    sub = outcome + ' before stopping.';
   } else if (!bad.length) {
-    kind = 'ok';
-    title = 'Freed ' + freed;
-    sub = plural(good.length, 'item') + ' cleaned in ' + secs + ' s.';
+    badge = 'ok';
+    title = outcome;
+    sub = plural(good.length, 'item') + ' cleaned in ' + secs + ' s.' + (held ? ' Disk space is freed when you empty what DevPrune is holding.' : '');
   } else if (good.length) {
-    kind = 'warn';
-    title = 'Freed ' + freed + ', ' + bad.length + ' failed';
+    badge = 'warn';
+    title = outcome + ', ' + bad.length + ' failed';
     sub = plural(good.length, 'item') + ' cleaned, ' + plural(bad.length, 'item') + ' could not be.';
   } else {
-    kind = 'err';
-    title = 'Nothing could be deleted';
+    badge = 'err';
+    title = 'Nothing could be cleaned';
     sub = plural(bad.length, 'item') + ' failed.';
   }
-  box.append(dlgHead(kind, title, sub));
+  box.append(dlgHead(badge, title, sub));
 
   const chips = el('div', 'chips');
   chips.append(el('span', 'chip ok', '✓ ' + good.length + (dry ? ' simulated' : ' cleaned')));
@@ -535,36 +604,75 @@ function showResult(d, dry, chosen, secs, again) {
   if (notRun > 0) chips.append(el('span', 'chip', '○ ' + notRun + ' not processed'));
   box.append(chips);
 
-  if (bad.length) {
-    const problems = el('div', 'plist bad');
-    bad.forEach(r => {
-      const i = byId.get(r.id);
-      const row = el('div', 'prow');
-      const main = el('div', 'pmain');
-      main.append(el('div', 'pn', i ? i.label + ' · ' + i.group : r.id), el('div', 'pm', r.msg));
-      row.append(el('span', 'st fail', '✕'), main);
-      problems.append(row);
-    });
-    box.append(problems, el('p', 'dnote', 'Failed items stay selected so you can try again.'));
-  }
+  if (bad.length) box.append(problemList(bad, byId), el('p', 'dnote', 'Failed items stay selected so you can try again.'));
   if (good.length) {
     const more = el('details', 'dd');
     more.append(el('summary', '', 'Show ' + plural(good.length, 'item')));
-    more.append(itemList(good.map(r => ({...byId.get(r.id), kb: dry ? byId.get(r.id).kb : (r.kb || 0)})).sort((a, b) => b.kb - a.kb), 12));
+    more.append(itemList(good.map(r => ({...byId.get(r.id), kb: dry ? byId.get(r.id).kb : (r.kb || r.held_kb || 0)})).sort((a, b) => b.kb - a.kb), 12));
     box.append(more);
   }
-  const btns = [button('Close', dry && good.length && again ? 'sec' : '', closeDialog)];
-  if (dry && good.length && again) {
-    btns.push(button('Delete for real…', 'danger', () => {
+  const stagedCount = good.filter(r => r.staged).length;
+  const holding = !dry && held > 0 && d.run && stagedCount > 0;
+  if (holding) box.append(el('p', 'dnote', 'DevPrune keeps these until you empty them. You can restore or empty them any time from the bar at the top of the page.'));
+  const offerReal = dry && good.length && again;
+  const btns = [button('Close', offerReal || holding ? 'sec' : '', closeDialog)];
+  if (offerReal) {
+    const perm = $('#perm').checked;
+    btns.push(button(perm ? 'Delete for real…' : 'Clean for real…', perm ? 'danger' : '', () => {
       // no closeDialog(): the confirm dialog replaces this one in place
       $('#dry').checked = false;
       updateCleanButton();
       $('#clean').click();
     }));
   }
+  if (holding) {
+    btns.push(button('Restore', 'sec', () => restoreFlow(d.run, null)));
+    btns.push(button('Empty now · frees ' + fmt(held), 'danger', () => emptyFlow(d.run, null, {count: stagedCount, kb: held})));
+  }
   box.append(dlgButtons(...btns));
   openDialog('result', box);
-  box.querySelector('.dbtns button').focus();  // Close, never the destructive button
+  box.querySelector('.dbtns button').focus();  // Close, never a destructive button
+}
+
+function showTrashResult(d, kind, chosen, secs) {
+  const box = el('div', 'dbox');
+  if (d.state === 'error') {
+    box.append(dlgHead('err', kind === 'empty' ? 'Emptying failed' : 'Restoring failed', d.error || 'Unknown error'),
+      dlgButtons(button('Close', '', closeDialog)));
+    openDialog('result', box);
+    return;
+  }
+  const byId = new Map(chosen.map(i => [i.id, i]));
+  const res = d.results || [];
+  const good = res.filter(r => r.ok);
+  const bad = res.filter(r => !r.ok);
+  const empty = kind === 'empty';
+  const did = empty ? 'Freed ' + fmt(d.freed_kb || 0) : 'Restored ' + plural(good.length, 'item');
+  let badge, title, sub;
+  if (d.state === 'stopped') {
+    badge = 'warn';
+    title = 'Stopped after ' + res.length + ' of ' + chosen.length;
+    sub = did + ' before stopping.';
+  } else if (!bad.length) {
+    badge = 'ok';
+    title = did;
+    sub = empty ? plural(good.length, 'item') + ' emptied in ' + secs + ' s.' : 'They are back where they were. Scan again to see them in the list.';
+  } else if (good.length) {
+    badge = 'warn';
+    title = did + ', ' + bad.length + ' failed';
+    sub = plural(bad.length, 'item') + ' could not be ' + (empty ? 'emptied' : 'restored') + ' and stay in DevPrune.';
+  } else {
+    badge = 'err';
+    title = empty ? 'Nothing could be emptied' : 'Nothing could be restored';
+    sub = plural(bad.length, 'item') + ' failed.';
+  }
+  box.append(dlgHead(badge, title, sub));
+  if (bad.length) box.append(problemList(bad, byId));
+  const btns = [button('Close', d.rescan ? 'sec' : '', closeDialog)];
+  if (d.rescan) btns.push(button('Scan now', '', () => { closeDialog(); $('#scan').click(); }));
+  box.append(dlgButtons(...btns));
+  openDialog('result', box);
+  box.querySelector('.dbtns button').focus();
 }
 
 // ---------------------------------------------------------------- cleaning
@@ -574,9 +682,11 @@ function setBusy(on) {
   if (on) $('#clean').disabled = true;
 }
 
-// Follow a clean job until it ends. `fresh` is true when this page started it (so it still holds the selection).
-function followClean(dry, chosen, fresh) {
-  const view = showProgress(dry, chosen, !fresh);
+const busy = () => !!(cleanPoll || scanPoll);
+
+// Follow a job (clean, empty or restore) until it ends. `fresh` is true when this page started it.
+function followJob(kind, dry, chosen, fresh, perm) {
+  const view = showProgress(kind, dry, chosen, !fresh, perm);
   setBusy(true);
   let polling = false;
   const finish = () => {
@@ -596,8 +706,9 @@ function followClean(dry, chosen, fresh) {
       if (d.state === 'running') return;
       finish();
       api('/api/clean_ack').catch(() => {});
-      showResult(d, dry, chosen, secs, fresh);
-      if (d.state === 'error') return;
+      showResult(d, kind, dry, chosen, secs, fresh);
+      refreshHold();
+      if (d.state === 'error' || kind !== 'clean') return;
       if (!dry) {
         // drop what was cleaned first, so the list and summary reflect reality when the dialog closes;
         // failed items stay (still selected) with their error shown inline
@@ -616,14 +727,20 @@ function followClean(dry, chosen, fresh) {
   }, 400);
 }
 
+async function followFromStatus() {
+  const c = await api('/api/clean_status');
+  followJob(c.kind || 'clean', c.dry, c.plan, true, c.permanent);
+}
+
 async function cleanClicked() {
   const dry = $('#dry').checked;
+  const perm = $('#perm').checked;
   const chosen = items.filter(i => sel.has(i.id)).sort((a, b) => b.kb - a.kb);
   if (!chosen.length) return;
-  if (!dry && !(await confirmDelete(chosen))) return;
+  if (!dry && !(await confirmClean(chosen, perm))) return;
   setBusy(true);
   try {
-    const r = await api('/api/clean', {ids: chosen.map(i => i.id), dry});
+    const r = await api('/api/clean', {ids: chosen.map(i => i.id), dry, permanent: perm});
     if (!r.started) {
       closeDialog();
       toast('Another operation is still running. Try again in a moment.', 'warn');
@@ -631,7 +748,7 @@ async function cleanClicked() {
       updateTotals();
       return;
     }
-    followClean(dry, chosen, true);
+    followJob('clean', dry, chosen, true, perm);
   } catch (e) {
     closeDialog();
     toast('Could not start cleaning: ' + e.message, 'error');
@@ -640,17 +757,138 @@ async function cleanClicked() {
   }
 }
 
-// A page that was reloaded (or opened later) picks up where the server is: a running clean or scan, or an
+// ---------------------------------------------------------------- what DevPrune is holding (D-19)
+const BUSY_MSG = 'Another operation is still running. Try again in a moment.';
+
+function renderHold(t) {
+  holdInfo = t;
+  const bar = $('#hold');
+  bar.replaceChildren();
+  bar.hidden = !t.count;
+  if (!t.count) return;
+  const old = t.oldest_days > 7;
+  bar.className = 'card holdbar' + (old ? ' old' : '');
+  const oldest = Math.min(...t.runs.map(r => r.created || Date.now() / 1000));
+  const text = el('div', 'holdtxt');
+  text.append(el('b', '', 'DevPrune is holding ' + plural(t.count, 'item') + (t.kb ? ' (' + fmt(t.kb) + ')' : '')),
+    el('span', 'age', ' · from ' + ago(oldest) + (old ? ' · consider emptying it' : '')));
+  const acts = el('div', 'holdacts');
+  acts.append(button('Review…', 'sec sm', reviewDialog),
+    button('Restore all', 'sec sm', () => restoreFlow(null, null)),
+    button('Empty…', 'sm', () => emptyFlow(null, null)));
+  bar.append(text, acts);
+}
+
+async function refreshHold() {
+  try { renderHold(await api('/api/trash')); } catch (e) { /* keep what is shown */ }
+}
+
+async function emptyFlow(run, ids, info) {
+  if (busy()) { toast(BUSY_MSG, 'warn'); return; }
+  const n = info ? info.count : (holdInfo ? holdInfo.count : 0);
+  const kb = info ? info.kb : (holdInfo ? holdInfo.kb : 0);
+  const body = {};
+  if (run) body.run = run;
+  if (ids) body.ids = ids;
+  const yes = await askConfirm(box => {
+    box.append(dlgHead('warn', 'Empty ' + plural(n, 'item') + '?',
+      fmt(kb) + ' will be deleted permanently and the disk space freed. This cannot be undone.'));
+  }, 'Empty ' + fmt(kb), true);
+  if (!yes) return;
+  try {
+    const r = await api('/api/trash_empty', body);
+    if (!r.started) { closeDialog(); toast(r.error || 'Could not start.', 'warn'); return; }
+    await followFromStatus();
+  } catch (e) {
+    closeDialog();
+    toast('Could not empty: ' + e.message, 'error');
+  }
+}
+
+async function restoreFlow(run, ids) {
+  if (busy()) { toast(BUSY_MSG, 'warn'); return; }
+  const body = {};
+  if (run) body.run = run;
+  if (ids) body.ids = ids;
+  try {
+    const c = await api('/api/trash_conflicts', body);
+    if (!c.ok) { toast(c.error || 'Could not check.', 'error'); return; }
+    if (c.items.length) {
+      const yes = await askConfirm(box => {
+        box.append(dlgHead('warn', plural(c.items.length, 'item') + (c.items.length === 1 ? ' already exists' : ' already exist'),
+          (c.items.length === 1 ? 'This was' : 'These were') + ' probably created again after DevPrune moved the old ' + (c.items.length === 1 ? 'one' : 'ones') +
+          ' aside. Restoring will delete the current version permanently and put back the one DevPrune is holding.'));
+        const list = el('div', 'plist');
+        c.items.slice(0, 8).forEach(x => {
+          const row = el('div', 'prow');
+          const name = el('div', 'pn');
+          name.append(x.label, el('span', 'pg', ' · ' + x.group));
+          name.title = x.path;
+          row.append(name, el('span', 'pv', ''));
+          list.append(row);
+        });
+        if (c.items.length > 8) list.append(el('div', 'prow more', '+ ' + plural(c.items.length - 8, 'more item')));
+        box.append(list);
+      }, 'Replace and restore', true);
+      if (!yes) return;
+      body.replace = true;
+    }
+    const r = await api('/api/trash_restore', body);
+    if (!r.started) { closeDialog(); toast(r.error || 'Could not start.', 'warn'); return; }
+    await followFromStatus();
+  } catch (e) {
+    closeDialog();
+    toast('Could not restore: ' + e.message, 'error');
+  }
+}
+
+async function reviewDialog() {
+  try {
+    const t = await api('/api/trash');
+    renderHold(t);
+    if (!t.count) { toast('DevPrune is not holding anything.', 'info'); return; }
+    const box = el('div', 'dbox');
+    box.append(dlgHead('info', 'DevPrune is holding ' + plural(t.count, 'item'),
+      (t.kb ? fmt(t.kb) + ' moved aside. ' : '') + 'Restore puts an item back; Empty deletes it for good.'));
+    for (const run of t.runs) {
+      const e = await api('/api/trash_entries', {run: run.id});
+      box.append(el('div', 'dsec', 'Moved aside ' + ago(run.created)));
+      const list = el('div', 'plist');
+      (e.items || []).forEach(it => {
+        const row = el('div', 'rrow');
+        const name = el('div', 'rname pn');
+        name.append(it.label, el('span', 'pg', ' · ' + it.group));
+        name.title = it.orig || '';
+        const acts = el('div', 'ra');
+        const restore = button('Restore', 'sec sm', () => restoreFlow(run.id, [it.id]));
+        restore.disabled = !it.restorable;
+        acts.append(restore, button('Empty', 'sec sm', () => emptyFlow(run.id, [it.id], {count: 1, kb: it.kb})));
+        row.append(name, el('span', 'pv', it.kb ? fmt(it.kb) : ''), acts);
+        if (!it.restorable) row.append(el('div', 'pm', it.problem));
+        list.append(row);
+      });
+      box.append(list);
+    }
+    box.append(dlgButtons(button('Close', '', closeDialog)));
+    openDialog('review', box);
+    box.querySelector('.dbtns button').focus();
+  } catch (e) {
+    toast('Could not load what DevPrune is holding: ' + e.message, 'error');
+  }
+}
+
+// A page that was reloaded (or opened later) picks up where the server is: a running job or scan, or an
 // outcome nobody has seen yet. Returns true when it attached to something.
 async function reattach() {
   const c = await api('/api/clean_status');
+  const kind = c.kind || 'clean';
   if (c.state === 'running' && c.plan.length) {
-    followClean(c.dry, c.plan, false);
+    followJob(kind, c.dry, c.plan, false, c.permanent);
     return true;
   }
   if (['done', 'stopped', 'error'].includes(c.state) && !c.acked && c.plan.length) {
     api('/api/clean_ack').catch(() => {});
-    showResult(c, c.dry, c.plan, Math.max(0, Math.round(c.finished - c.started)), false);
+    showResult(c, kind, c.dry, c.plan, Math.max(0, Math.round(c.finished - c.started)), false);
   }
   const s = await api('/api/status');
   if (s.state === 'running') {
@@ -715,6 +953,7 @@ $('#gear').onclick = () => {
 $('#scan').onclick = scanClicked;
 $('#full').onclick = () => { if (scanPoll || cleanPoll) return; wantFull = true; $('#scan').click(); };
 $('#dry').onchange = updateCleanButton;
+$('#perm').onchange = updateCleanButton;
 $('#all').onclick = () => { items.forEach(i => { if (i.risk === 'safe' && i.exists !== false) sel.add(i.id); }); render(); };
 $('#none').onclick = () => { sel.clear(); render(); };
 $('#clean').onclick = cleanClicked;
@@ -732,6 +971,7 @@ updateCleanButton();
       haveCache = true;
     }
   } catch (e) { /* no cache: fall through to a scan */ }
+  refreshHold();
   try {
     if (await reattach()) return;
   } catch (e) { /* the server will answer the next click */ }
