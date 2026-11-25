@@ -3,7 +3,7 @@ import json
 import time
 from pathlib import Path
 
-from . import paths, safety, state
+from . import paths, safety, state, trash
 
 CACHE_VERSION = 3
 PUB = ("id", "framework", "group", "label", "path", "note", "risk", "kb")
@@ -12,7 +12,8 @@ PUB = ("id", "framework", "group", "label", "path", "note", "risk", "kb")
 def pub(c):
     """Item as shown to the UI. Items whose path vanished are reported with size 0."""
     exists = Path(c["path"]).exists()
-    d = {k: c[k] for k in PUB} | {"has_cmd": bool(c["cmd"]), "exists": exists}
+    d = {k: c[k] for k in PUB} | {"has_cmd": bool(c["cmd"]), "exists": exists,
+                                  "can_stage": not c["cmd"] and trash.can_stage(c["path"])}
     if not exists:
         d["kb"] = 0
     return d

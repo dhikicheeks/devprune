@@ -9,5 +9,9 @@ JOB = {"state": "idle", "cancel": threading.Event(), "procs": set(), "phase": ""
        "items": [], "error": ""}
 CJOB = {"state": "idle", "total": 0, "done": 0, "current": "", "results": [], "freed_kb": 0,
         "stop": threading.Event(), "dry": False, "error": "",
+        # held_kb: size moved to the DevPrune staging area (not yet freed); run: id of that staging run
+        "held_kb": 0, "run": "", "permanent": True,
+        # kind: "clean" | "empty" | "restore" (one job slot for all three); rescan: a restore changed the disk
+        "kind": "clean", "rescan": False,
         # plan/started/finished/acked let a reloaded page re-attach to the job or see its outcome once
         "plan": [], "started": 0, "finished": 0, "acked": True}

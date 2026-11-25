@@ -3,7 +3,7 @@ import argparse
 import threading
 import webbrowser
 
-from . import __version__, cache, config, server
+from . import __version__, cache, config, server, trash
 
 
 def main(argv=None):
@@ -24,6 +24,10 @@ def main(argv=None):
         if not a.no_browser:
             webbrowser.open(url)
         return 0
+    try:
+        trash.reconcile()   # only the process that owns the port may repair journals left by a crash
+    except Exception as e:  # noqa: BLE001 - a damaged staging folder must never stop the dashboard
+        print(f"Could not check the DevPrune staging folder: {e}", flush=True)
     print(f"DevPrune is running at {url}  (Ctrl+C to stop)", flush=True)
     if not a.no_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()

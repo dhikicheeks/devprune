@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import clean, config, launcher, scan, state
+from . import clean, config, launcher, scan, state, trash
 
 TOKEN = secrets.token_urlsafe(24)
 WEB = Path(__file__).parent / "web"
@@ -101,15 +101,55 @@ def _cache(_):
 
 def _clean(body):
     ids = [str(i) for i in body.get("ids", [])]
-    return {"started": clean.start_clean(ids, bool(body.get("dry")))}
+    # D-19: moving aside (undo possible) is the default; only a JSON `true` asks for permanent deletion
+    return {"started": clean.start_clean(ids, bool(body.get("dry")), body.get("permanent") is True)}
 
 
 def _clean_status(_):
-    keys = ("state", "total", "done", "current", "freed_kb", "dry", "error", "started", "finished", "acked")
+    keys = ("state", "total", "done", "current", "freed_kb", "dry", "error", "started", "finished", "acked",
+            "held_kb", "run", "permanent", "kind", "rescan")
     st = {k: state.CJOB[k] for k in keys}
     st["plan"] = list(state.CJOB["plan"])  # what was asked for, so a reloaded page can rebuild the progress view
     st["results"] = list(state.CJOB["results"])  # live per-item results, so the UI can show progress
     return st
+
+
+def _trash_args(body):
+    run, ids = body.get("run"), body.get("ids")
+    if run is not None and not isinstance(run, str):
+        raise trash.TrashError("Bad run id.")
+    if ids is not None and not (isinstance(ids, list) and all(isinstance(i, str) for i in ids)):
+        raise trash.TrashError("Bad entry ids.")
+    return run, ids
+
+
+def _trash_summary(_):
+    return {"ok": True, **trash.summary()}
+
+
+def _trash_read(fn):
+    def route(body):
+        try:
+            run, ids = _trash_args(body)
+            return {"ok": True, "items": fn(run, ids)}
+        except trash.TrashError as e:
+            return {"ok": False, "error": str(e)}
+    return route
+
+
+def _trash_job(kind):
+    def route(body):
+        try:
+            run, ids = _trash_args(body)
+            views = trash.targets(run, ids)
+        except trash.TrashError as e:
+            return {"started": False, "error": str(e)}
+        if not views:
+            return {"started": False, "error": "Nothing to do."}
+        if not clean.start_trash_job(kind, views, body.get("replace") is True):
+            return {"started": False, "error": "Another scan or clean is running."}
+        return {"started": True}
+    return route
 
 
 def _clean_ack(_):
@@ -147,7 +187,11 @@ ROUTES = {"/api/command": _command_status,
           "/api/command_remove": _command_do(launcher.remove),
           "/api/scan": _scan, "/api/status": _status, "/api/cancel": _cancel, "/api/cache": _cache,
           "/api/clean": _clean, "/api/clean_status": _clean_status, "/api/clean_stop": _clean_stop,
-          "/api/clean_ack": _clean_ack}
+          "/api/clean_ack": _clean_ack,
+          "/api/trash": _trash_summary,
+          "/api/trash_entries": _trash_read(lambda run, ids: trash.entries(run) if run else []),
+          "/api/trash_conflicts": _trash_read(trash.restore_conflicts),
+          "/api/trash_restore": _trash_job("restore"), "/api/trash_empty": _trash_job("empty")}
 
 
 def make_server(port):
