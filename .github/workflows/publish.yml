@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.target }}
-      url: ${{ inputs.target == 'pypi' && 'https://pypi.org/project/devprune/' || 'https://test.pypi.org/project/devprune/' }}
+      url: ${{ inputs.target == 'pypi' && 'https://pypi.org/project/devprune-cli/' || 'https://test.pypi.org/project/devprune-cli/' }}
     permissions:
       id-token: write
     steps:

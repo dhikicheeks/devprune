@@ -50,6 +50,9 @@ Run `pytest` and `ruff check .` first. Describe what you changed and how you tes
 
 ## Releasing (maintainer)
 
+The PyPI package is called **`devprune-cli`** (PyPI refuses `devprune` because it is too similar to the existing
+`dev-prune` package); the command, the Python module and the repository stay `devprune`.
+
 Releases go to PyPI with [Trusted Publishing](https://docs.pypi.org/trusted-publishers/): GitHub proves to PyPI who it
 is, so there is no API token to store or leak. Nothing is published automatically. `.github/workflows/publish.yml`
 only runs when the owner starts it by hand, and the `pypi` environment also needs the owner's approval and a `v*` tag.
@@ -59,7 +62,7 @@ Add a pending publisher*, with
 
 | Field | TestPyPI | PyPI |
 |---|---|---|
-| PyPI project name | `devprune` | `devprune` |
+| PyPI project name | `devprune-cli` | `devprune-cli` |
 | Owner | `dhikicheeks` | `dhikicheeks` |
 | Repository name | `devprune` | `devprune` |
 | Workflow name | `publish.yml` | `publish.yml` |
@@ -71,5 +74,5 @@ Add a pending publisher*, with
    and merge once CI is green. A version number can never be reused on PyPI.
 2. Tag it (`git tag -a v0.1.1 -m "DevPrune 0.1.1"`, then `git push origin v0.1.1`) and create the GitHub Release.
 3. *Actions → Publish to PyPI → Run workflow*: first with target `testpypi`, check
-   <https://test.pypi.org/project/devprune/>, then run it again from the tag with target `pypi` and approve it.
-4. Check that `pipx install devprune` works in a clean environment.
+   <https://test.pypi.org/project/devprune-cli/>, then run it again from the tag with target `pypi` and approve it.
+4. Check that `pipx install devprune-cli` works in a clean environment and puts `devprune` and `dp` on the PATH.
