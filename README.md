@@ -39,18 +39,25 @@ Run one command, your browser opens, and you see every project grouped by framew
 
 ## Install
 
-Requires macOS and Python 3.9 or newer. Not on PyPI yet.
+Requires macOS and Python 3.9 or newer.
 
 The easiest way is [pipx](https://pipx.pypa.io/), which installs command-line tools in their own environment:
 
 ```sh
-pipx install git+https://github.com/dhikicheeks/devprune.git
+pipx install devprune-cli
 ```
 
-To update later, run the same command with `--force`.
+The package is called `devprune-cli` on PyPI (the name `devprune` was not available); the command it installs is
+`devprune`, with `dp` as a short alias. To update later, run `pipx upgrade devprune-cli`.
 
 > **Name:** DevPrune is not related to the [`dev-prune`](https://pypi.org/project/dev-prune/) package on PyPI, a separate
 > project with a similar name.
+
+To get the latest development version straight from GitHub instead (re-run with `--force` to update):
+
+```sh
+pipx install git+https://github.com/dhikicheeks/devprune.git
+```
 
 Or install from source:
 

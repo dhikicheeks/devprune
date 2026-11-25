@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1 - 2026-11-26
+
+First release on PyPI. There are no behavior changes.
+
+- Published as `devprune-cli` (PyPI refused `devprune` because it is too similar to the existing `dev-prune` package).
+  The command (`devprune`, `dp`), the Python module and the repository keep their names.
+- README: install with `pipx install devprune-cli` (or straight from GitHub), and a note that DevPrune is not related
+  to `dev-prune`.
+- Packaging: author, classifiers and project URLs; the sdist now contains the test configuration.
+- Releases are published to PyPI with Trusted Publishing from a manually started workflow.
+
 ## 0.1.0 - 2026-11-25
 
 - Local web dashboard (`devprune` / `dp`) grouped by framework, then project, then item, with sizes and checkboxes.

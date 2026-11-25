@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devprune-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local web dashboard to find and clean caches and build artifacts (pnpm/Next.js, Laravel, Flutter) on macOS."
 readme = "README.md"
 requires-python = ">=3.9"
